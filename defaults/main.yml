@@ -1,0 +1,4 @@
+---
+# defaults file for mikrotik-initialize
+ansible_mgmt_user: "ansiblex"
+ansible_mgmt_user_key: ""
