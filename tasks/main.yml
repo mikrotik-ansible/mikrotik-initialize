@@ -1,16 +1,43 @@
 ---
+- include: check_vars.yml
+- include: dependency.yml
+
+- name: Checking if ansible user already exists ( with password defined )
+  command: bash -c "sshpass -p "{{ssh_passwd}}" ssh {{ssh_login}}@{{inventory_hostname}} -p {{ssh_port}} -T -o StrictHostKeyChecking=no -o NumberOfPasswordPrompts=1 -o ConnectTimeout=10 \":put [/user find name={{mikrotik_initialize.ansible_user}}]\""
+  register: check_ansible_user
+  when: ssh_passwd != ""
+
+- set_fact: ansible_user_exists="{{check_ansible_user.stdout}}"
+  when: check_ansible_user.changed
+
+- name: Checking if ansible user already exists ( without password defined )
+  command: bash -c "ssh {{ssh_login}}@{{inventory_hostname}} -p {{ssh_port}} -T -o StrictHostKeyChecking=no -o NumberOfPasswordPrompts=1 -o ConnectTimeout=10 \":put [/user find name={{mikrotik_initialize.ansible_user}}]\""
+  register: check_ansible_user
+  when: ssh_passwd == ""
+
+- set_fact: ansible_user_exists="{{check_ansible_user.stdout}}"
+  when: check_ansible_user.changed
+
+- block:
   - name: Generate random password via pwgen
-    local_action: command pwgen -s 20 1
+    command: pwgen -s 20 1
     register: random_passwd
 
   - name: Generate ansible_user.rsc to check and add user
     template: src=ansible_user.rsc.j2 dest={{role_path}}/files/tmp/{{inventory_hostname}}.rsc
 
   - name: Run ansible_user.rsc script
-    command: bash -c "cat {{role_path}}/files/tmp/{{inventory_hostname}}.rsc | sshpass -p "{{ssh_passwd}}" ssh {{ssh_login}}@{{inventory_hostname}} -p {{ssh_port}} -T -o StrictHostKeyChecking=no -o NumberOfPasswordPrompts=1"
+    command: bash -c "cat {{role_path}}/files/tmp/{{inventory_hostname}}.rsc | sshpass -p "{{ssh_passwd}}" ssh {{ssh_login}}@{{inventory_hostname}} -p {{ssh_port}} -T -o StrictHostKeyChecking=no -o NumberOfPasswordPrompts=1 -o ConnectTimeout=10"
+    when: ssh_passwd != ""
+
+  - name: Run ansible_user.rsc script
+    command: bash -c "cat {{role_path}}/files/tmp/{{inventory_hostname}}.rsc | ssh {{ssh_login}}@{{inventory_hostname}} -p {{ssh_port}} -T -o StrictHostKeyChecking=no -o NumberOfPasswordPrompts=1 -o ConnectTimeout=10"
+    when: ssh_passwd == ""
 
   - name: Delete temporary ansible_user file
     file: path={{role_path}}/files/tmp/{{inventory_hostname}}.rsc state=absent
 
-#  - name: Save password to file
-#    command: bash -c "echo "{{inventory_hostname}} Login {{ansible_mgmt_user}} Password {{random_passwd.stdout}}" >> passwords.txt"
+  - name: Save password to file
+    command: bash -c "echo "{{inventory_hostname}} Login {{ansible_mgmt_user}} Password {{random_passwd.stdout}}" >> {{playbook_dir}}/passwords.txt"
+
+  when: ansible_user_exists == ''

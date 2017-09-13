@@ -1,0 +1,13 @@
+---
+
+- name: ssh_port should be defined
+  assert:
+    that:
+      - ssh_port is defined and ssh_port != ''
+    msg: "Set the value of 'ssh_port'"
+
+- name: ssh_login should be defined
+  assert:
+    that:
+      - ssh_login is defined and ssh_login != ''
+    msg: "Set the value of 'ssh_login'"
