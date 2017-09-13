@@ -38,6 +38,6 @@
     file: path={{role_path}}/files/tmp/{{inventory_hostname}}.rsc state=absent
 
   - name: Save password to file
-    command: bash -c "echo "{{inventory_hostname}} Login {{ansible_mgmt_user}} Password {{random_passwd.stdout}}" >> {{playbook_dir}}/passwords.txt"
+    command: bash -c "echo "{{inventory_hostname}} Login {{ansible_user}} Password {{random_passwd.stdout}}" >> {{playbook_dir}}/passwords.txt"
 
   when: ansible_user_exists == ''
